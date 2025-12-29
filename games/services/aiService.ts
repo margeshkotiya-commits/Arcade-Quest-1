@@ -1,31 +1,42 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// 1. Get the API Key safely
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// Global variable to hold the model instance (starts empty)
+let aiModel: any = null;
 
-// 2. Initialize variables (but don't start AI yet)
-let genAI: GoogleGenerativeAI | null = null;
-let model: any = null;
+/**
+ * Safely initializes the AI only when needed.
+ * This prevents the "White Screen" crash on page load.
+ */
+const getAIModel = () => {
+  // 1. If we already started it, return it.
+  if (aiModel) return aiModel;
 
-// 3. Try to connect ONLY if the key exists
-if (API_KEY && API_KEY.length > 0) {
-  try {
-    genAI = new GoogleGenerativeAI(API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-pro" });
-  } catch (error) {
-    console.error("AI Service Initialization Failed:", error);
+  // 2. Check for key safely
+  const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  if (!API_KEY || API_KEY.length === 0) {
+    console.warn("⚠️ AI Skipped: Missing API Key.");
+    return null; // Return null safely
   }
-} else {
-  // Log a warning so you know why AI isn't working, but DON'T CRASH
-  console.warn("⚠️ AI Features Disabled: VITE_GEMINI_API_KEY is missing in Environment Variables.");
-}
+
+  // 3. Initialize
+  try {
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    aiModel = genAI.getGenerativeModel({ model: "gemini-pro" });
+    return aiModel;
+  } catch (error) {
+    console.error("⚠️ AI Init Error:", error);
+    return null;
+  }
+};
 
 // === Helper Functions ===
 
 export const generateAiFeedback = async (score: number, total: number, subject: string): Promise<string> => {
-  // SAFETY CHECK: If AI didn't load, return a default message
+  const model = getAIModel(); // <--- Only tries to start AI here!
+
   if (!model) {
-    return `Great job completing the ${subject} mission! You scored ${score}/${total}. (AI Feedback unavailable)`;
+    return `Great job completing the ${subject} mission! You scored ${score}/${total}.`;
   }
 
   try {
@@ -40,9 +51,10 @@ export const generateAiFeedback = async (score: number, total: number, subject: 
 };
 
 export const generateQuestionsFromAI = async (grade: string, subject: string): Promise<any[]> => {
-  // SAFETY CHECK: If AI didn't load, return empty array
+  const model = getAIModel(); // <--- Only tries to start AI here!
+
   if (!model) {
-    console.warn("Cannot generate questions: No API Key.");
+    console.warn("Cannot generate questions: AI not active.");
     return []; 
   }
 
@@ -51,7 +63,6 @@ export const generateQuestionsFromAI = async (grade: string, subject: string): P
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    // Basic cleanup to ensure JSON is valid
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {

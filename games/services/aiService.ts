@@ -1,44 +1,68 @@
+
 // ==========================================
-// 🚫 AI DISABLED MODE
-// This file replaces the real AI with static logic.
+// 🚫 AI DISABLED - MOCK SERVICE
+// This file replaces the Google Gemini API.
 // No API Key is required.
 // ==========================================
 
-/**
- * Generates feedback based on the score using simple math logic
- * instead of calling an external AI.
- */
-export const generateAiFeedback = async (score: number, total: number, subject: string): Promise<string> => {
-  // Calculate percentage
-  // Avoid division by zero
-  const percentage = total > 0 ? (score / total) * 100 : 0;
+export interface DiagnosticAnalysis {
+  strengths: string[];
+  weaknesses: string[];
+  recommendation: string;
+  encouragement: string;
+}
 
-  // Simulate a slight delay to make it feel like "processing"
-  await new Promise(resolve => setTimeout(resolve, 500));
+export const analyzePerformance = async (
+  name: string,
+  grade: string,
+  history: { skill: string; correct: boolean; timeTaken: number }[]
+): Promise<DiagnosticAnalysis> => {
+  // Simulate a short "thinking" delay for realism
+  await new Promise(resolve => setTimeout(resolve, 600));
 
-  // Return specific messages based on performance
+  const total = history.length;
+  const correctCount = history.filter(h => h.correct).length;
+  // Calculate percentage safely
+  const percentage = total > 0 ? (correctCount / total) * 100 : 0;
+
+  // 1. Identify Strengths (Unique skills from correct answers)
+  const strengthSet = new Set(history.filter(h => h.correct).map(h => h.skill));
+  let strengths = Array.from(strengthSet).slice(0, 3);
+  if (strengths.length === 0) strengths = ["Persistence", "Effort"];
+
+  // 2. Identify Weaknesses (Unique skills from incorrect answers)
+  const weaknessSet = new Set(history.filter(h => !h.correct).map(h => h.skill));
+  let weaknesses = Array.from(weaknessSet).slice(0, 2);
+  if (weaknesses.length === 0) weaknesses = ["None! Perfect run."];
+
+  // 3. Recommendation Logic
+  let recommendation = "";
   if (percentage >= 90) {
-    return `Incredible! You are a ${subject} Master! 🌟 Keep up the amazing work!`;
+    recommendation = "You've mastered this! Challenge yourself with the next difficulty level.";
+  } else if (percentage >= 70) {
+    recommendation = "Great work! Review the few missed questions to achieve perfection.";
+  } else if (percentage >= 50) {
+    recommendation = "You're getting there! Focus on accuracy over speed in the next round.";
+  } else {
+    recommendation = "Take your time. Read each question carefully and try again.";
   }
-  if (percentage >= 75) {
-    return `Great job! You have strong skills in ${subject}. 🚀 A little more practice and you'll be perfect!`;
-  }
-  if (percentage >= 50) {
-    return `Good effort! You're on the right track with ${subject}. 👍 Keep practicing!`;
-  }
-  if (percentage > 0) {
-    return `Nice try! Don't give up. Review your mistakes and try ${subject} again! 💪`;
-  }
-  
-  return `Mission Failed, but that's okay! Every mistake is a lesson. Try again!`;
-};
 
-/**
- * Placeholder for Question Generation.
- * Since AI is disabled, this returns an empty array.
- * The App will fall back to using your QuestionBank or JSON upload.
- */
-export const generateQuestionsFromAI = async (grade: string, subject: string): Promise<any[]> => {
-  console.log("AI Generation is disabled. Using default Question Bank.");
-  return [];
+  // 4. Encouragement Logic (Mock AI Persona)
+  let encouragement = "";
+  if (percentage >= 90) {
+    encouragement = `Incredible! You are a Master! 🌟`;
+  } else if (percentage >= 75) {
+    encouragement = `Great job! You have strong skills. 🚀`;
+  } else if (percentage >= 50) {
+    encouragement = `Good effort! Keep practicing! 👍`;
+  } else {
+    encouragement = `Don't give up! Every mistake is a lesson. 💪`;
+  }
+
+  return {
+    strengths,
+    weaknesses,
+    recommendation,
+    encouragement
+  };
 };
